@@ -1,6 +1,5 @@
-
 import streamlit as st
-import numpy as np, pickle, cv2
+import numpy as np, pickle, gzip, cv2, os
 from PIL import Image
 import torch, timm
 from torchvision import transforms
@@ -10,7 +9,6 @@ from sklearn.preprocessing import normalize
 st.set_page_config(page_title="Hybrid AI — Disease Detection",
                    page_icon="🌿", layout="wide")
 
-# ---------- styling ----------
 st.markdown("""
 <style>
 .stApp { background: linear-gradient(180deg,#0d3320 0%,#14532d 100%); }
@@ -24,14 +22,28 @@ h1,h2,h3 { color:#eafaf1 !important; }
 </style>
 """, unsafe_allow_html=True)
 
+def load_gz(path):
+    if not os.path.exists(path):
+        parts = sorted([f for f in os.listdir('.') if f.startswith(os.path.basename(path)+'.part')])
+        if parts:
+            with open(path,'wb') as out:
+                for p in parts:
+                    with open(p,'rb') as f:
+                        out.write(f.read())
+    with gzip.open(path,'rb') as f:
+        return pickle.load(f)
+
 @st.cache_resource
 def load_all():
     swin = timm.create_model('swin_base_patch4_window7_224',
                              pretrained=True, num_classes=0).eval()
-    L = lambda p: pickle.load(open(p,'rb'))
-    return (swin, L('final_model.pkl'), L('cat_plant.pkl'),
-            L('med_lgb_fused.pkl'), L('cat_med_fused.pkl'),
-            L('xgb_med.pkl'), L('plant_classes.pkl'))
+    return (swin,
+            load_gz('final_model.pkl.gz'),
+            load_gz('cat_plant.pkl.gz'),
+            load_gz('med_lgb_fused.pkl.gz'),
+            load_gz('cat_med_fused.pkl.gz'),
+            load_gz('xgb_med.pkl.gz'),
+            pickle.load(open('plant_classes.pkl','rb')))
 
 swin, plant_lgb, plant_cat, med_lgb, med_cat, xgb_med, plant_classes = load_all()
 med_classes = ['COVID-19','Normal','Pneumonia']
@@ -48,7 +60,7 @@ treatments = {
  "Potato___healthy":"Plant is healthy. Maintain good soil drainage.",
 }
 med_advice = {
- "COVID-19":"⚠️ Isolate patient. Confirm with RT-PCR. Seek medical care immediately.",
+ "COVID-19":"Isolate patient. Confirm with RT-PCR. Seek medical care immediately.",
  "Normal":"No infection detected. Lungs appear clear.",
  "Pneumonia":"Consult doctor. Likely bacterial/viral pneumonia — may need antibiotics.",
 }
@@ -69,8 +81,7 @@ def hog_feats(img):
 st.title("🌿 Hybrid Learning Framework")
 st.markdown("<p class='muted' style='color:#bfe3cd'>Swin Transformer + XGBoost + Attention Fusion + LightGBM/CatBoost</p>", unsafe_allow_html=True)
 
-mode = st.sidebar.radio("Select Domain",
-                        ["🌿 Plant Disease","🏥 Medical X-Ray"])
+mode = st.sidebar.radio("Select Domain", ["🌿 Plant Disease","🏥 Medical X-Ray"])
 st.sidebar.success("Plant: 98.80%")
 st.sidebar.info("Medical: 95.03%")
 
@@ -98,6 +109,7 @@ with c2:
                 clean = name.replace("___"," - ").replace("_"," ")
                 adv = treatments.get(name,"Consult an agriculture expert.")
                 healthy = "healthy" in name.lower()
+                labels = plant_classes
             else:
                 xp = xgb_med.predict_proba(hog_feats(img))
                 fused = np.concatenate([normalize(emb)*0.4, normalize(xp)*0.6], axis=1)
@@ -106,13 +118,13 @@ with c2:
                 clean = med_classes[idx]
                 adv = med_advice.get(clean,"Consult a doctor.")
                 healthy = (clean=="Normal")
+                labels = med_classes
 
             cls = "result-pos" if healthy else "result-warn"
             st.markdown(f"<div class='{cls}'><span class='muted'>Disease Identified</span><br><span class='big'>{clean}</span></div>", unsafe_allow_html=True)
             st.markdown(f"<div class='result-pos'><span class='muted'>Confidence Level</span><br><span class='big'>{conf:.2f}%</span></div>", unsafe_allow_html=True)
             st.markdown(f"<div class='result-warn'><span class='muted'>Expert Advice</span><br><b>{adv}</b></div>", unsafe_allow_html=True)
 
-            labels = plant_classes if "Plant" in mode else med_classes
             st.markdown("<br><b style='color:#14532d'>Top 3 Predictions</b>", unsafe_allow_html=True)
             for i in ens[0].argsort()[-3:][::-1]:
                 n = labels[i].replace("___"," - ").replace("_"," ")
