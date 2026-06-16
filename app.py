@@ -15,10 +15,12 @@ st.markdown("""
 h1,h2,h3 { color:#eafaf1 !important; }
 .card { background:#ffffff; border-radius:18px; padding:26px;
         box-shadow:0 8px 24px rgba(0,0,0,0.18); }
-.result-pos { background:#eafaf1; border-radius:12px; padding:16px; margin:8px 0; }
-.result-warn{ background:#fef5e7; border-radius:12px; padding:16px; margin:8px 0; }
-.big { font-size:30px; font-weight:800; color:#14532d; }
+.darkcard { background:#0f3d24; border-radius:18px; padding:26px;
+        box-shadow:0 8px 24px rgba(0,0,0,0.25); }
+.result-box { background:#15532e; border-radius:12px; padding:16px; margin:8px 0; }
+.big { font-size:30px; font-weight:800; color:#ffffff; }
 .muted{ color:#5c5c5c; font-size:13px; }
+.muted-l{ color:#bfe3cd; font-size:13px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -79,7 +81,7 @@ def hog_feats(img):
     return np.array(pf, dtype=np.float32).reshape(1,-1)
 
 st.title("🌿 Hybrid Learning Framework")
-st.markdown("<p class='muted' style='color:#bfe3cd'>Swin Transformer + XGBoost + Attention Fusion + LightGBM/CatBoost</p>", unsafe_allow_html=True)
+st.markdown("<p class='muted-l'>Swin Transformer + XGBoost + Attention Fusion + LightGBM/CatBoost</p>", unsafe_allow_html=True)
 
 mode = st.sidebar.radio("Select Domain", ["🌿 Plant Disease","🏥 Medical X-Ray"])
 st.sidebar.success("Plant: 98.80%")
@@ -97,8 +99,6 @@ with c1:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with c2:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader("Analysis Result")
     if up:
         with st.spinner("Analyzing..."):
             emb = swin_emb(img)
@@ -108,7 +108,6 @@ with c2:
                 name = plant_classes[idx]
                 clean = name.replace("___"," - ").replace("_"," ")
                 adv = treatments.get(name,"Consult an agriculture expert.")
-                healthy = "healthy" in name.lower()
                 labels = plant_classes
             else:
                 xp = xgb_med.predict_proba(hog_feats(img))
@@ -117,31 +116,44 @@ with c2:
                 idx = int(np.argmax(ens,1)[0]); conf=float(ens[0].max()*100)
                 clean = med_classes[idx]
                 adv = med_advice.get(clean,"Consult a doctor.")
-                healthy = (clean=="Normal")
                 labels = med_classes
 
-            cls = "result-pos" if healthy else "result-warn"
-            st.markdown(f"<div class='{cls}'><span class='muted'>Disease Identified</span><br><span class='big'>{clean}</span></div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='result-pos'><span class='muted'>Confidence Level</span><br><span class='big'>{conf:.2f}%</span></div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='result-warn'><span class='muted'>Expert Advice</span><br><b style='color:#1a1a1a'>{adv}</b></div>", unsafe_allow_html=True)
-
-            st.markdown("<br><b style='color:#14532d;font-size:16px'>Top 3 Predictions</b>", unsafe_allow_html=True)
+            # build Top 3 HTML
+            top3_html = ""
             for rank, i in enumerate(ens[0].argsort()[-3:][::-1]):
                 n = labels[i].replace("___"," - ").replace("_"," ")
                 pct = float(ens[0][i]*100)
-                bar_col = "#14532d" if rank == 0 else "#5a9367"
-                st.markdown(f"""
+                bar_col = "#7ed99f" if rank == 0 else "#4a8c63"
+                top3_html += f"""
                 <div style='margin:10px 0;'>
-                  <div style='display:flex;justify-content:space-between;color:#1a1a1a;font-size:14px;font-weight:600;margin-bottom:4px;'>
+                  <div style='display:flex;justify-content:space-between;color:#ffffff;font-size:14px;font-weight:600;margin-bottom:4px;'>
                     <span>{n}</span><span>{pct:.1f}%</span>
                   </div>
-                  <div style='background:#e0e0e0;border-radius:8px;height:14px;width:100%;'>
+                  <div style='background:#0a2b18;border-radius:8px;height:14px;width:100%;'>
                     <div style='background:{bar_col};width:{pct:.1f}%;height:14px;border-radius:8px;'></div>
                   </div>
-                </div>
-                """, unsafe_allow_html=True)
-    else:
-        st.info("Upload an image to see results.")
-    st.markdown("</div>", unsafe_allow_html=True)
+                </div>"""
 
-st.markdown("<p class='muted' style='text-align:center;color:#bfe3cd'>Jorhat Institute of Science and Technology — ECE Dept</p>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class='darkcard'>
+              <h3 style='color:#ffffff !important;margin-top:0;'>Analysis Result</h3>
+              <div class='result-box'>
+                <span class='muted-l'>Disease Identified</span><br>
+                <span class='big'>{clean}</span>
+              </div>
+              <div class='result-box'>
+                <span class='muted-l'>Confidence Level</span><br>
+                <span class='big'>{conf:.2f}%</span>
+              </div>
+              <div class='result-box'>
+                <span class='muted-l'>Expert Advice</span><br>
+                <b style='color:#ffffff;'>{adv}</b>
+              </div>
+              <br><b style='color:#7ed99f;font-size:16px;'>Top 3 Predictions</b>
+              {top3_html}
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='darkcard'><h3 style='color:#fff !important;margin-top:0;'>Analysis Result</h3><p style='color:#bfe3cd;'>Upload an image to see results.</p></div>", unsafe_allow_html=True)
+
+st.markdown("<p class='muted-l' style='text-align:center;'>Jorhat Institute of Science and Technology — ECE Dept</p>", unsafe_allow_html=True)
