@@ -123,13 +123,23 @@ with c2:
             cls = "result-pos" if healthy else "result-warn"
             st.markdown(f"<div class='{cls}'><span class='muted'>Disease Identified</span><br><span class='big'>{clean}</span></div>", unsafe_allow_html=True)
             st.markdown(f"<div class='result-pos'><span class='muted'>Confidence Level</span><br><span class='big'>{conf:.2f}%</span></div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='result-warn'><span class='muted'>Expert Advice</span><br><b>{adv}</b></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='result-warn'><span class='muted'>Expert Advice</span><br><b style='color:#1a1a1a'>{adv}</b></div>", unsafe_allow_html=True)
 
-            st.markdown("<br><b style='color:#14532d'>Top 3 Predictions</b>", unsafe_allow_html=True)
-            for i in ens[0].argsort()[-3:][::-1]:
+            st.markdown("<br><b style='color:#14532d;font-size:16px'>Top 3 Predictions</b>", unsafe_allow_html=True)
+            for rank, i in enumerate(ens[0].argsort()[-3:][::-1]):
                 n = labels[i].replace("___"," - ").replace("_"," ")
-                st.write(f"{n} — {ens[0][i]*100:.1f}%")
-                st.progress(int(ens[0][i]*100))
+                pct = float(ens[0][i]*100)
+                bar_col = "#14532d" if rank == 0 else "#5a9367"
+                st.markdown(f"""
+                <div style='margin:10px 0;'>
+                  <div style='display:flex;justify-content:space-between;color:#1a1a1a;font-size:14px;font-weight:600;margin-bottom:4px;'>
+                    <span>{n}</span><span>{pct:.1f}%</span>
+                  </div>
+                  <div style='background:#e0e0e0;border-radius:8px;height:14px;width:100%;'>
+                    <div style='background:{bar_col};width:{pct:.1f}%;height:14px;border-radius:8px;'></div>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
     else:
         st.info("Upload an image to see results.")
     st.markdown("</div>", unsafe_allow_html=True)
