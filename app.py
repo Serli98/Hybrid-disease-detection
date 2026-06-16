@@ -15,11 +15,6 @@ st.markdown("""
 h1,h2,h3 { color:#eafaf1 !important; }
 .card { background:#ffffff; border-radius:18px; padding:26px;
         box-shadow:0 8px 24px rgba(0,0,0,0.18); }
-.darkcard { background:#0f3d24; border-radius:18px; padding:26px;
-        box-shadow:0 8px 24px rgba(0,0,0,0.25); }
-.result-box { background:#15532e; border-radius:12px; padding:16px; margin:8px 0; }
-.big { font-size:30px; font-weight:800; color:#ffffff; }
-.muted{ color:#5c5c5c; font-size:13px; }
 .muted-l{ color:#bfe3cd; font-size:13px; }
 </style>
 """, unsafe_allow_html=True)
@@ -118,42 +113,20 @@ with c2:
                 adv = med_advice.get(clean,"Consult a doctor.")
                 labels = med_classes
 
-            # build Top 3 HTML
-            top3_html = ""
+            html = "<div style='background:#0f3d24;border-radius:18px;padding:26px;box-shadow:0 8px 24px rgba(0,0,0,0.25);'>"
+            html += "<h3 style='color:#ffffff;margin-top:0;'>Analysis Result</h3>"
+            html += f"<div style='background:#15532e;border-radius:12px;padding:16px;margin:8px 0;'><span style='color:#bfe3cd;font-size:13px;'>Disease Identified</span><br><span style='font-size:28px;font-weight:800;color:#ffffff;'>{clean}</span></div>"
+            html += f"<div style='background:#15532e;border-radius:12px;padding:16px;margin:8px 0;'><span style='color:#bfe3cd;font-size:13px;'>Confidence Level</span><br><span style='font-size:28px;font-weight:800;color:#ffffff;'>{conf:.2f}%</span></div>"
+            html += f"<div style='background:#15532e;border-radius:12px;padding:16px;margin:8px 0;'><span style='color:#bfe3cd;font-size:13px;'>Expert Advice</span><br><b style='color:#ffffff;'>{adv}</b></div>"
+            html += "<br><b style='color:#7ed99f;font-size:16px;'>Top 3 Predictions</b>"
             for rank, i in enumerate(ens[0].argsort()[-3:][::-1]):
                 n = labels[i].replace("___"," - ").replace("_"," ")
                 pct = float(ens[0][i]*100)
                 bar_col = "#7ed99f" if rank == 0 else "#4a8c63"
-                top3_html += f"""
-                <div style='margin:10px 0;'>
-                  <div style='display:flex;justify-content:space-between;color:#ffffff;font-size:14px;font-weight:600;margin-bottom:4px;'>
-                    <span>{n}</span><span>{pct:.1f}%</span>
-                  </div>
-                  <div style='background:#0a2b18;border-radius:8px;height:14px;width:100%;'>
-                    <div style='background:{bar_col};width:{pct:.1f}%;height:14px;border-radius:8px;'></div>
-                  </div>
-                </div>"""
-
-            st.markdown(f"""
-            <div class='darkcard'>
-              <h3 style='color:#ffffff !important;margin-top:0;'>Analysis Result</h3>
-              <div class='result-box'>
-                <span class='muted-l'>Disease Identified</span><br>
-                <span class='big'>{clean}</span>
-              </div>
-              <div class='result-box'>
-                <span class='muted-l'>Confidence Level</span><br>
-                <span class='big'>{conf:.2f}%</span>
-              </div>
-              <div class='result-box'>
-                <span class='muted-l'>Expert Advice</span><br>
-                <b style='color:#ffffff;'>{adv}</b>
-              </div>
-              <br><b style='color:#7ed99f;font-size:16px;'>Top 3 Predictions</b>
-              {top3_html}
-            </div>
-            """, unsafe_allow_html=True)
+                html += f"<div style='margin:10px 0;'><div style='display:flex;justify-content:space-between;color:#ffffff;font-size:14px;font-weight:600;margin-bottom:4px;'><span>{n}</span><span>{pct:.1f}%</span></div><div style='background:#0a2b18;border-radius:8px;height:14px;width:100%;'><div style='background:{bar_col};width:{pct:.1f}%;height:14px;border-radius:8px;'></div></div></div>"
+            html += "</div>"
+            st.markdown(html, unsafe_allow_html=True)
     else:
-        st.markdown("<div class='darkcard'><h3 style='color:#fff !important;margin-top:0;'>Analysis Result</h3><p style='color:#bfe3cd;'>Upload an image to see results.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div style='background:#0f3d24;border-radius:18px;padding:26px;'><h3 style='color:#fff;margin-top:0;'>Analysis Result</h3><p style='color:#bfe3cd;'>Upload an image to see results.</p></div>", unsafe_allow_html=True)
 
 st.markdown("<p class='muted-l' style='text-align:center;'>Jorhat Institute of Science and Technology — ECE Dept</p>", unsafe_allow_html=True)
